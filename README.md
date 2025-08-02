@@ -1,4 +1,4 @@
-# Intellectual Property Smart Contract
+# Intellectual Property Smart Contract with Royalty and Escrow
 
 This Solidity smart contract enables users to register and trade intellectual properties (IP) — including Patents, Copyrights, and Trademarks — on the Ethereum blockchain. It includes features such as royalty-based resale logic and secure transfer of ownership.
 
