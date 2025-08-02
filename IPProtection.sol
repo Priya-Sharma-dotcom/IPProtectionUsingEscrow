@@ -16,6 +16,7 @@ contract IPContract {
         string description;
         IpType ipType;
         address currentOwner;
+        address creator;
         address[] owners;
         bool registered;
         uint price;
@@ -32,10 +33,11 @@ contract IPContract {
         _;
     }
 
-    event IpAdded(uint id, address indexed currentOwner);
+    event IpAdded(uint id, address indexed creator);
     event BuyerPaid(uint amount, address indexed buyer);
     event OwnershipTransferred(uint id, address indexed newOwner);
     event RefundIssued(uint id, uint amount, address indexed buyer);
+    event RoyaltyPaid(uint id, uint amount, address indexed to);
 
     mapping(uint => IP) public IPs;
     mapping(uint => address) public pendingBuyers;
@@ -46,19 +48,20 @@ contract IPContract {
         string memory _description,
         IpType _ipType,
         uint _price
-    ) public OnlyAdmin {
+    ) public {
+        ipCounter++;
         IP storage prop = IPs[ipCounter];
 
         prop.name = _name;
         prop.description = _description;
         prop.ipType = _ipType;
-        prop.currentOwner = admin;
-        prop.owners.push(admin);
+        prop.currentOwner = msg.sender;
+        prop.creator = msg.sender;
+        prop.owners.push(msg.sender);
         prop.registered = true;
         prop.price = _price;
 
-        emit IpAdded(ipCounter, admin);
-        ipCounter++;
+        emit IpAdded(ipCounter, msg.sender);
     }
 
     function buyIP(uint id) public payable {
@@ -91,14 +94,20 @@ contract IPContract {
         address buyer = pendingBuyers[id];
         require(buyer != address(0), "No buyer available");
 
-        payable(prop.currentOwner).transfer(prop.price);
+        uint royalty = (prop.price * 10) / 100;
+        uint sellerAmount = prop.price - royalty;
+
+        payable(prop.creator).transfer(royalty);
+        payable(prop.currentOwner).transfer(sellerAmount);
 
         prop.currentOwner = buyer;
         prop.owners.push(buyer);
         prop.price += 0.5 ether;
 
         delete pendingBuyers[id];
+
         emit OwnershipTransferred(id, buyer);
+        emit RoyaltyPaid(id, royalty, prop.creator);
     }
 
     function getIPInfo(uint id)
@@ -108,6 +117,7 @@ contract IPContract {
             string memory,
             string memory,
             IpType,
+            address,
             address,
             address[] memory,
             uint
@@ -119,6 +129,7 @@ contract IPContract {
             prop.description,
             prop.ipType,
             prop.currentOwner,
+            prop.creator,
             prop.owners,
             prop.price
         );
@@ -126,5 +137,9 @@ contract IPContract {
 
     function getCurrentOwner(uint id) public view returns (address) {
         return IPs[id].currentOwner;
+    }
+
+    function getCreator(uint id) public view returns (address) {
+        return IPs[id].creator;
     }
 }
